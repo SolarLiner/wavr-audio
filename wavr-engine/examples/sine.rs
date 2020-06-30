@@ -4,10 +4,6 @@
  * are licensed under MIT.
  */
 
-use byteorder::{ByteOrder, LittleEndian};
-use std::fs::{File, OpenOptions};
-use std::io::Write;
-use std::mem::size_of;
 use wavr_engine::{AudioContext, AudioEngine, Effect};
 
 struct SineWaveGenerator {
