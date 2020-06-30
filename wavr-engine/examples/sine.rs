@@ -24,9 +24,10 @@ impl Effect for SineWaveGenerator {
         for s in 0..context.buffer_size {
             for i in 0..context.channel_count {
                 let idx = s * context.channel_count as usize + i as usize;
+                let decay = (context.timestamp_offset(s).as_secs_f64() * -5.0).exp();
                 let phase =
                     context.timestamp_offset(s).as_secs_f64() % (2.0 * std::f64::consts::PI);
-                data[idx] = (self.freq * phase).sin() * self.amplitude;
+                data[idx] = (self.freq * phase).sin() * self.amplitude * decay;
             }
         }
     }

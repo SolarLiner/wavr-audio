@@ -1,0 +1,18 @@
+[package]
+name = "wavr-meter"
+version = "0.1.0"
+authors = ["Nathan Graule <solarliner@gmail.com>"]
+edition = "2018"
+workspace = ".."
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+ebur128 = "0.1"
+smallvec = "1.4"
+
+[dev-dependencies]
+cpal = "0.11"
+itertools = "0.9"
+ordered-float = "1.1"
+pbr = "1.0"

@@ -7,6 +7,10 @@
       <sourceFolder url="file://$MODULE_DIR$/wavr-engine/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/wavr-engine/examples" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/linkedlist/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/wavr-meter/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/wavr-meter/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/wavr-meter-druid/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/wavr-meter-druid/examples" isTestSource="false" />
       <excludeFolder url="file://$MODULE_DIR$/target" />
     </content>
     <orderEntry type="inheritedJdk" />

@@ -1,4 +1,5 @@
 [workspace]
 members = [
-    "wavr-engine"
+    "wavr-engine",
+    "wavr-meter",
 ]
