@@ -11,8 +11,6 @@ use ebur128::EbuR128;
 use crate::decibel::{Decibel, LUFS};
 
 pub mod modes {
-    use std::marker::PhantomData;
-
     use ebur128::{EbuR128, Mode};
 
     use crate::decibel::{Decibel, LUFS};
@@ -22,10 +20,13 @@ pub mod modes {
         fn get_loudness(meter: &EbuR128) -> LUFS;
     }
 
+    #[derive(Copy, Clone, Debug)]
     pub struct Momentary;
 
+    #[derive(Copy, Clone, Debug)]
     pub struct Short;
 
+    #[derive(Copy, Clone, Debug)]
     pub struct Integrated;
 
     impl EBUMeterMode for Momentary {
