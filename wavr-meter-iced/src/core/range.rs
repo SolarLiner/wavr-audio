@@ -6,6 +6,7 @@
 
 use num::Float;
 
+#[derive(Copy, Clone, Debug)]
 pub struct Range<F> {
     pub min: F,
     pub max: F,
@@ -17,7 +18,7 @@ impl<F: Float> Range<F> {
     }
 
     pub fn map(&self, x: F) -> F {
-        x - self.min / self.range()
+        (x - self.min) / self.range()
     }
 
     pub fn unmap(&self, x: F) -> F {
