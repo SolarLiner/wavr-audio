@@ -8,9 +8,11 @@ use async_std::stream::IntoStream;
 use async_std::sync::{channel, Receiver};
 use cpal::traits::{DeviceTrait, EventLoopTrait, HostTrait};
 use cpal::{Sample, StreamData, UnknownTypeInputBuffer};
-use iced::{Application, Element, Settings};
-use iced_native::{Column, Command, Subscription, Text};
+use iced::{canvas, executor, Application, Canvas, Element, Row, Settings};
+use iced_native::{Align, Color, Column, Command, Length, Subscription, Text};
 
+use iced_wgpu::Container;
+use wavr_meter::decibel::Decibel;
 use wavr_meter::{group_interleaved_channels, PeakMeter, WavrMeter, WavrMeterData};
 use wavr_meter_iced::Meter;
 
@@ -18,19 +20,21 @@ mod recipes;
 
 struct MetersApp {
     meters: Option<WavrMeter>,
+    canvases: Vec<(Meter, canvas::layer::Cache<Meter>)>,
     is_error: bool,
 }
 
 impl Application for MetersApp {
-    type Executor = iced_futures::executor::AsyncStd;
+    type Executor = executor::Default;
     type Message = recipes::cpal::Data;
     type Flags = Option<Receiver<WavrMeterData>>;
 
-    fn new(flags: Self::Flags) -> (Self, Command<Self::Message>) {
+    fn new(_flags: Self::Flags) -> (Self, Command<Self::Message>) {
         (
             Self {
                 meters: None,
                 is_error: false,
+                canvases: vec![],
             },
             Command::none(),
         )
@@ -44,11 +48,20 @@ impl Application for MetersApp {
         use recipes::cpal::Data;
         match message {
             Data::Format(format) => {
+                self.canvases = (0..format.channels).map(|_| Default::default()).collect();
                 self.meters = Some(WavrMeter::new(format.channels as u32, format.sample_rate.0))
             }
             Data::Data(data) => {
                 if let Some(meters) = self.meters.as_mut() {
                     meters.add_samples(&data);
+                    let value = dbg!(meters.get_values());
+                    self.canvases
+                        .iter_mut()
+                        .enumerate()
+                        .for_each(|(i, (meter, layer))| {
+                            meter.set_values(value.peak[i], value.loudness);
+                            layer.clear();
+                        });
                 }
             }
             Data::Error => self.is_error = true,
@@ -63,20 +76,32 @@ impl Application for MetersApp {
 
     fn view(&mut self) -> Element<'_, Self::Message> {
         if self.is_error {
-            Text::new("An audio error occured. :<").into()
+            Container::new(
+                Text::new("An audio error occurred. :<")
+                    .color(Color::BLACK)
+                    .size(24),
+            )
+            .align_x(Align::Center)
+            .align_y(Align::Center)
+            .width(Length::Fill)
+            .height(Length::Fill)
+            .into()
         } else {
-            if let Some(data) = self.meters.as_mut().map(|m| m.get_values()) {
-                Column::with_children(
-                    data.peak
-                        .iter()
-                        .map(|val| Meter::new(val.into(), data.loudness).into())
-                        .collect(),
-                )
-                .spacing(10)
-                .into()
-            } else {
-                Text::new("No data yet").into()
-            }
+            Row::with_children(
+                self.canvases
+                    .iter()
+                    .map(|(meter, layer)| {
+                        Canvas::new()
+                            .width(Length::Fill)
+                            .height(Length::Fill)
+                            .push(layer.with(meter))
+                            .into()
+                    })
+                    .collect(),
+            )
+            .padding(10)
+            .spacing(10)
+            .into()
         }
     }
 }
