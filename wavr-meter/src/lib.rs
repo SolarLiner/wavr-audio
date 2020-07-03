@@ -21,7 +21,7 @@ pub struct WavrMeter {
     ebu_meter: EBUMeter<modes::Momentary>,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct WavrMeterData {
     pub peak: SmallVec<[Linear; 16]>,
     pub loudness: LUFS,

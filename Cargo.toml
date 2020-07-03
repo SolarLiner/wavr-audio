@@ -2,4 +2,5 @@
 members = [
     "wavr-engine",
     "wavr-meter",
+    "wavr-meter-iced",
 ]

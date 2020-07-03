@@ -11,6 +11,8 @@
       <sourceFolder url="file://$MODULE_DIR$/wavr-meter/examples" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/wavr-meter-druid/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/wavr-meter-druid/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/wavr-meter-iced/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/wavr-meter-iced/examples" isTestSource="false" />
       <excludeFolder url="file://$MODULE_DIR$/target" />
     </content>
     <orderEntry type="inheritedJdk" />
