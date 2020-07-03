@@ -15,10 +15,11 @@ pub mod decibel;
 pub mod ebu;
 pub mod peak;
 
+#[derive(Debug)]
 pub struct WavrMeter {
     channels: u32,
     peak_meters: SmallVec<[PeakMeter; 16]>,
-    ebu_meter: EBUMeter<modes::Momentary>,
+    ebu_meter: EBUMeter<modes::Short>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
