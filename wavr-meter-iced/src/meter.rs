@@ -63,8 +63,6 @@ impl canvas::Drawable for Meter {
         let peak_height = clamp(self.range.map(self.peak_data.0)) as f32;
         let loudness_height = clamp(self.range.map(self.loudness_data.0)) as f32;
 
-        let zero_point = 1.0 - self.range.map(0.0) as f32;
-
         let peak_rect = Path::rectangle(
             Point::new(0.0, size.height * (1.0 - peak_height)),
             Size::new(size.width, size.height * peak_height),
@@ -74,10 +72,14 @@ impl canvas::Drawable for Meter {
             Size::new(size.width, size.height * loudness_height),
         );
 
-        let zero_line = Path::line(
-            Point::new(0.0, size.height * zero_point),
-            Point::new(size.width, size.height * zero_point),
-        );
+        let ticks = Path::new(|builder| {
+            for (pos, value) in self.range.linspace(10.0) {
+                let height = size.height * (1.0 - pos as f32);
+
+                builder.move_to(Point::new(0., height));
+                builder.line_to(Point::new(size.width, height));
+            }
+        });
 
         frame.fill(
             &Path::rectangle(Point::new(0.0, 0.0), size),
@@ -86,10 +88,10 @@ impl canvas::Drawable for Meter {
         frame.fill(&peak_rect, self.peak_color);
         frame.fill(&loudness_rect, self.loudness_color);
         frame.stroke(
-            &zero_line,
+            &ticks,
             Stroke {
                 color: Color::BLACK,
-                width: 1.0,
+                width: 0.5,
                 ..Default::default()
             },
         );
