@@ -13,6 +13,10 @@
       <sourceFolder url="file://$MODULE_DIR$/wavr-meter-druid/examples" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/wavr-meter-iced/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/wavr-meter-iced/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/wavr-player/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/wavr-player/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/wavr-meter-relm/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/wavr-meter-relm/examples" isTestSource="false" />
       <excludeFolder url="file://$MODULE_DIR$/target" />
     </content>
     <orderEntry type="inheritedJdk" />

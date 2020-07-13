@@ -3,4 +3,6 @@ members = [
     "wavr-engine",
     "wavr-meter",
     "wavr-meter-iced",
+    "wavr-meter-relm",
+    "wavr-player",
 ]
