@@ -4,6 +4,7 @@
  * are licensed under MIT.
  */
 
+use circular_queue::CircularQueue;
 use ebur128::EbuR128;
 
 use crate::decibel::Linear;
@@ -12,7 +13,8 @@ use crate::decibel::Linear;
 pub struct PeakMeter {
     meter: EbuR128,
     decay: f64,
-    last_peak: Linear,
+    peaks: CircularQueue<Linear>,
+    last_shown_peak: Linear,
 }
 
 impl PeakMeter {
@@ -24,8 +26,9 @@ impl PeakMeter {
                 ebur128::Mode::SAMPLE_PEAK | ebur128::Mode::TRUE_PEAK,
             )
             .unwrap(),
-            last_peak: Linear(0.0),
-            decay: 0.95,
+            peaks: CircularQueue::with_capacity(5),
+            last_shown_peak: Linear(0.0),
+            decay: 0.94,
         }
     }
 
@@ -39,23 +42,35 @@ impl PeakMeter {
 
     pub fn get_sample_peak(&mut self) -> Linear {
         let val = self.meter.prev_sample_peak(0).unwrap();
-        let val = if val > self.last_peak.0 {
-            Linear(val)
+        let val = self.get_held_peak(Linear(val));
+        let val = if val > self.last_shown_peak {
+            val
         } else {
-            self.last_peak * self.decay
+            self.last_shown_peak * self.decay
         };
-        self.last_peak = val;
+        self.last_shown_peak = val;
         val
     }
 
     pub fn get_true_peak(&mut self) -> Linear {
         let val = self.meter.prev_true_peak(0).unwrap();
-        let val = if val > self.last_peak.0 {
-            Linear(val)
+        let val = self.get_held_peak(Linear(val));
+        let val = if val >= self.last_shown_peak {
+            val
         } else {
-            self.last_peak * self.decay
+            self.last_shown_peak * self.decay
         };
-        self.last_peak = val;
+        self.last_shown_peak = val;
         val
+    }
+
+    fn get_held_peak(&mut self, val: Linear) -> Linear {
+        self.peaks.push(val);
+        *self
+            .peaks
+            .iter()
+            .filter(|a| a.0.is_finite())
+            .max_by(|a, b| a.partial_cmp(b).unwrap())
+            .unwrap_or(&val)
     }
 }
