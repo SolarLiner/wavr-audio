@@ -4,13 +4,20 @@
  * are licensed under MIT.
  */
 
-use crate::range::Range;
-use gtk::{Inhibit, WidgetExt};
-use relm::{connect, Relm, Update, Widget};
+use std::ops::Deref;
+
+use gtk::{Inhibit, StyleContextExt, WidgetExt};
+use relm::{connect, interval, DrawHandler, Relm, Update, Widget};
+use relm_derive::Msg;
+
 use wavr_meter::decibel::{Decibel, LUFS};
 
+use crate::range::Range;
+
+#[derive(Msg, Clone, Debug)]
 pub enum Messages {
     Value(Decibel, LUFS),
+    Redraw,
 }
 
 pub struct SingleMeterModel {
@@ -22,39 +29,7 @@ pub struct SingleMeter {
     data: Option<SingleMeterModel>,
     range: Range<f64>,
     root: gtk::DrawingArea,
-}
-
-impl SingleMeter {
-    fn draw(&self, cr: &cairo::Context) -> gtk::Inhibit {
-        if let Some(data) = &self.data {
-            let width = self.root.get_allocated_width() as f64;
-            let height = self.root.get_allocated_height() as f64;
-            let peak_pc = self.range.map(data.peak.0);
-            let peak = height * peak_pc;
-            let peak_inv = height * (1.0 - peak_pc);
-            cr.set_source_rgb(0.1, 1.0, 0.5);
-            cr.rectangle(0.0, peak_inv, width, peak);
-            cr.fill();
-
-            let loudness_pc = self.range.map(data.loudness.0);
-            let loudness = height * loudness_pc;
-            let loudness_inv = height * (1.0 - loudness_pc);
-
-            cr.set_source_rgba(0.1, 0.5, 1.0, 0.5);
-            cr.rectangle(0.0, loudness_inv, width, loudness);
-            cr.fill();
-
-            cr.set_source_rgba(0.0, 0.0, 0.0, 0.3);
-            cr.set_line_width(1.0);
-            for m in (self.range.min as i32)..0 {
-                let y = self.range.map(m as f64) * height;
-                cr.move_to(0.0, y);
-                cr.line_to(width, y);
-            }
-            cr.stroke();
-        }
-        Inhibit(false)
-    }
+    draw_handler: DrawHandler<gtk::DrawingArea>,
 }
 
 impl Update for SingleMeter {
@@ -66,10 +41,67 @@ impl Update for SingleMeter {
         None
     }
 
+    fn subscriptions(&mut self, _relm: &Relm<Self>) {
+        interval(_relm.stream(), 16, || Messages::Redraw);
+    }
+
     fn update(&mut self, event: Self::Msg) {
         match event {
             Messages::Value(peak, loudness) => {
-                self.data = Some(SingleMeterModel { peak, loudness })
+                self.data = Some(SingleMeterModel { peak, loudness });
+            }
+            Messages::Redraw => {
+                let ctx = self.draw_handler.get_context();
+                let alloc = self.root.get_allocation();
+                let width = alloc.width as f64;
+                let height = alloc.height as f64;
+                let pattern = cairo::LinearGradient::new(0.0, 0.0, 0.0, height);
+                let zero_point = 1.0 - self.range.map(0.0);
+                let half_point = 1.0 - self.range.map(-6.0);
+                pattern.add_color_stop_rgb(0.0, 1.0, 0.2, 0.1);
+                pattern.add_color_stop_rgb(zero_point, 1.0, 0.2, 0.1);
+                pattern.add_color_stop_rgb(zero_point + 0.001, 1.0, 1.0, 0.2);
+                pattern.add_color_stop_rgb(half_point, 1.0, 1.0, 0.2);
+                pattern.add_color_stop_rgb(half_point + 0.001, 0.1, 1.0, 0.2);
+                pattern.add_color_stop_rgb(1.0, 0.0, 0.7, 0.1);
+
+                ctx.save();
+                //ctx.translate(alloc.x as f64, alloc.y as f64);
+
+                ctx.rectangle(0.0, 0.0, width, height);
+                ctx.set_source_rgb(0.15, 0.2, 0.2);
+                ctx.fill();
+
+                if let Some(data) = &self.data {
+                    let peak_pc = self.range.map(data.peak.0);
+                    let peak = height * peak_pc;
+                    let peak_inv = height * (1.0 - peak_pc);
+
+                    ctx.set_source(&pattern);
+                    ctx.rectangle(0.0, peak_inv, width, peak);
+                    ctx.fill();
+
+                    let loudness_pc = self.range.map(data.loudness.0);
+                    let loudness = height * loudness_pc;
+                    let loudness_inv = height * (1.0 - loudness_pc);
+
+                    ctx.set_source_rgba(0.1, 0.5, 1.0, 0.5);
+                    ctx.rectangle(0.0, loudness_inv, width, loudness);
+                    ctx.fill();
+
+                    ctx.set_source_rgba(0.0, 0.0, 0.0, 0.3);
+                    ctx.set_line_width(1.);
+                    for y in ((self.range.min as i32)..=0)
+                        .step_by(6)
+                        .map(|m| (1.0 - self.range.map(m as f64)) * height)
+                    {
+                        ctx.move_to(0.0, y);
+                        ctx.line_to(width, y);
+                    }
+                    ctx.stroke();
+
+                    ctx.restore();
+                }
             }
         }
     }
@@ -78,19 +110,28 @@ impl Update for SingleMeter {
 impl Widget for SingleMeter {
     type Root = gtk::DrawingArea;
 
+    fn init_view(&mut self) {
+        self.draw_handler.init(&self.root);
+    }
+
     fn root(&self) -> Self::Root {
         self.root.clone()
     }
 
     fn view(relm: &Relm<Self>, data: Option<SingleMeterModel>) -> Self {
-        let root = gtk::DrawingAreaBuilder::new().build();
-        root.connect_draw(Self::draw);
+        let root = gtk::DrawingAreaBuilder::new()
+            .vexpand(true)
+            .hexpand(true)
+            .width_request(2)
+            .height_request(100)
+            .build();
         Self {
             data,
             range: Range {
                 min: -48.0,
                 max: 6.0,
             },
+            draw_handler: DrawHandler::new().unwrap(),
             root,
         }
     }

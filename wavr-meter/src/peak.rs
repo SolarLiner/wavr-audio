@@ -25,7 +25,7 @@ impl PeakMeter {
             )
             .unwrap(),
             last_peak: Linear(0.0),
-            decay: 0.98,
+            decay: 0.95,
         }
     }
 

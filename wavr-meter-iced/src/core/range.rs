@@ -24,19 +24,6 @@ impl<F: Float> Range<F> {
     pub fn unmap(&self, x: F) -> F {
         self.min + x * self.range()
     }
-
-    pub fn linspace(&self, count: F) -> Vec<(F, F)> {
-        let icount = count.ceil() as usize;
-        let step = F::one() / count;
-        let mut cur = F::zero();
-        let mut res = Vec::with_capacity(icount);
-        for _ in 0..icount {
-            res.push((cur, self.unmap(cur)));
-            cur = cur + step;
-        }
-
-        res
-    }
 }
 
 impl<F: Float> Default for Range<F> {

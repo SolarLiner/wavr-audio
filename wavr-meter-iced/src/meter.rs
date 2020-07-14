@@ -12,14 +12,14 @@ use iced_native::{
     window::Backend,
     Background, Color, Element, Hasher, Layout, Length, MouseCursor, Point, Size, Widget,
 };
+use iced_wgpu::widget::canvas::Frame;
 use iced_wgpu::{Defaults, Primitive, Renderer};
+use num::Float;
 
 use wavr_meter::decibel::{Linear, LUFS};
 use wavr_meter::{decibel::Decibel, WavrMeterData};
 
 use crate::core::Range;
-use iced_wgpu::widget::canvas::Frame;
-use num::Float;
 
 #[derive(Copy, Clone, Debug)]
 pub struct Meter {
@@ -72,29 +72,12 @@ impl canvas::Drawable for Meter {
             Size::new(size.width, size.height * loudness_height),
         );
 
-        let ticks = Path::new(|builder| {
-            for (pos, value) in self.range.linspace(10.0) {
-                let height = size.height * (1.0 - pos as f32);
-
-                builder.move_to(Point::new(0., height));
-                builder.line_to(Point::new(size.width, height));
-            }
-        });
-
         frame.fill(
             &Path::rectangle(Point::new(0.0, 0.0), size),
             Color::from([0.0, 0.0, 0.0, 0.1]),
         );
         frame.fill(&peak_rect, self.peak_color);
         frame.fill(&loudness_rect, self.loudness_color);
-        frame.stroke(
-            &ticks,
-            Stroke {
-                color: Color::BLACK,
-                width: 0.5,
-                ..Default::default()
-            },
-        );
     }
 }
 

@@ -14,6 +14,7 @@ gtk = "0.9"
 relm = "0.20"
 relm-derive = "0.20"
 num = "0.3"
+pango = "0.9"
 wavr-engine = { path = "../wavr-engine" }
 wavr-meter = { path = "../wavr-meter" }
 
