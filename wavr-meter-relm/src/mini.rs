@@ -44,7 +44,6 @@ impl MiniMeterModel {
     fn draw_ticks(&self, cr: &cairo::Context, width: f64, height: f64) {
         let peak_pc = self.range.map(self.peak.0);
         let leds = width as u32 / (self.led_width + 3);
-        dbg!(leds);
         for i in 0..leds {
             let pc = i as f64 / leds as f64;
             if peak_pc > pc {
