@@ -154,7 +154,7 @@ impl Widget for SingleMeter {
                 let loudness = height * loudness_pc;
                 let loudness_inv = height * (1.0 - loudness_pc);
 
-                cr.set_source_rgba(0.1, 0.5, 1.0, 0.5);
+                cr.set_source_rgba(0.1, 0.5, 1.0, 0.7);
                 cr.rectangle(0.0, loudness_inv, width, loudness);
                 cr.fill();
 
