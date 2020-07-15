@@ -4,7 +4,10 @@
  * are licensed under MIT.
  */
 
+use std::borrow::Borrow;
+use std::cell::{Ref, RefCell};
 use std::ops::Deref;
+use std::rc::Rc;
 
 use gtk::{Inhibit, StyleContextExt, WidgetExt};
 use relm::{connect, interval, DrawHandler, Relm, Update, Widget};
@@ -26,9 +29,10 @@ pub struct SingleMeterModel {
 }
 
 pub struct SingleMeter {
-    data: Option<SingleMeterModel>,
-    range: Range<f64>,
+    data: Rc<RefCell<Option<SingleMeterModel>>>,
     root: gtk::DrawingArea,
+    range: Range<f64>,
+
     draw_handler: DrawHandler<gtk::DrawingArea>,
 }
 
@@ -48,10 +52,11 @@ impl Update for SingleMeter {
     fn update(&mut self, event: Self::Msg) {
         match event {
             Messages::Value(peak, loudness) => {
-                self.data = Some(SingleMeterModel { peak, loudness });
+                *self.data.borrow_mut() = Some(SingleMeterModel { peak, loudness });
             }
             Messages::Redraw => {
-                let ctx = self.draw_handler.get_context();
+                self.root.queue_draw();
+                /*let ctx = self.draw_handler.get_context();
                 let alloc = self.root.get_allocation();
                 let width = alloc.width as f64;
                 let height = alloc.height as f64;
@@ -101,7 +106,7 @@ impl Update for SingleMeter {
                     ctx.stroke();
 
                     ctx.restore();
-                }
+                }*/
             }
         }
     }
@@ -111,7 +116,73 @@ impl Widget for SingleMeter {
     type Root = gtk::DrawingArea;
 
     fn init_view(&mut self) {
-        self.draw_handler.init(&self.root);
+        let model = self.data.clone();
+        let range = self.range;
+
+        self.root.connect_draw(move |da, cr| {
+            let alloc = da.get_allocation();
+            let width = alloc.width as f64;
+            let height = alloc.height as f64;
+            let model: Ref<_> = model.deref().borrow();
+            let style = da.get_style_context();
+            let pattern = cairo::LinearGradient::new(0.0, 0.0, 0.0, height);
+            let zero_point = 1.0 - range.map(0.0);
+            let half_point = 1.0 - range.map(-6.0);
+            pattern.set_extend(cairo::Extend::Pad);
+            pattern.add_color_stop_rgb(0.0, 1.0, 0.2, 0.1);
+            pattern.add_color_stop_rgb(zero_point, 1.0, 0.2, 0.1);
+            pattern.add_color_stop_rgb(zero_point, 1.0, 1.0, 0.2);
+            pattern.add_color_stop_rgb(half_point, 1.0, 1.0, 0.2);
+            pattern.add_color_stop_rgb(half_point, 0.1, 1.0, 0.2);
+            pattern.add_color_stop_rgb(1.0, 0.0, 0.7, 0.1);
+
+            gtk::render_background(&style, cr, 0.0, 0.0, width, height);
+            cr.set_source_rgba(0.0, 0.0, 0.0, 0.1);
+            cr.rectangle(0.0, 0.0, width, height);
+            cr.fill();
+
+            if let Some(data) = model.deref() {
+                let peak_pc = range.map(data.peak.0);
+                let peak = height * peak_pc;
+                let peak_inv = height * (1.0 - peak_pc);
+
+                cr.set_source(&pattern);
+                cr.rectangle(0.0, peak_inv, width, peak);
+                cr.fill();
+
+                let loudness_pc = range.map(data.loudness.0);
+                let loudness = height * loudness_pc;
+                let loudness_inv = height * (1.0 - loudness_pc);
+
+                cr.set_source_rgba(0.1, 0.5, 1.0, 0.5);
+                cr.rectangle(0.0, loudness_inv, width, loudness);
+                cr.fill();
+
+                cr.set_source_rgba(0.0, 0.0, 0.0, 0.3);
+                cr.set_line_width(1.);
+                for y in ((range.min as i32)..=0)
+                    .step_by(6)
+                    .map(|m| (1.0 - range.map(m as f64)) * height)
+                {
+                    cr.move_to(0.0, y);
+                    cr.line_to(width, y);
+                }
+                cr.stroke();
+
+                cr.set_source_rgb(0.0, 0.0, 0.0);
+                for (dB, y) in ((range.min as i32)..=0)
+                    .step_by(6)
+                    .map(|m| (m, height * (1.0 - range.map(m as f64))))
+                {
+                    let text = format!("{}", dB);
+                    let extends = cr.text_extents(&text);
+                    cr.move_to(2.0, extends.height + y + 2.0);
+                    cr.text_path(&text);
+                }
+                cr.fill();
+            }
+            Inhibit(false)
+        });
     }
 
     fn root(&self) -> Self::Root {
@@ -126,7 +197,7 @@ impl Widget for SingleMeter {
             .height_request(100)
             .build();
         Self {
-            data,
+            data: Rc::from(RefCell::from(data)),
             range: Range {
                 min: -48.0,
                 max: 6.0,

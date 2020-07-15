@@ -28,7 +28,7 @@ impl PeakMeter {
             .unwrap(),
             peaks: CircularQueue::with_capacity(5),
             last_shown_peak: Linear(0.0),
-            decay: 0.94,
+            decay: 0.96,
         }
     }
 
