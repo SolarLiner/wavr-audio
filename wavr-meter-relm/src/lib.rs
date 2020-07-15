@@ -13,6 +13,7 @@ use wavr_meter::WavrMeterData;
 use crate::meter::SingleMeter;
 
 mod meter;
+pub mod mini;
 mod range;
 
 #[derive(Msg, Clone, Debug)]

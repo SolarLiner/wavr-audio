@@ -12,13 +12,15 @@ use cpal::{
     default_host, BuildStreamError, Device, Sample, SampleFormat, SampleRate, Stream, StreamConfig,
     StreamError,
 };
-use gtk::WidgetExt;
+use gtk::{ContainerExt, WidgetExt};
 use num::ToPrimitive;
 use relm::{connect, Channel, Component, ContainerWidget, Relm, Sender, Update, Widget};
 use relm_derive::Msg;
 
+use wavr_meter::decibel::Linear;
 use wavr_meter::{WavrMeter, WavrMeterData};
-use wavr_meter_relm::{Messages as WidgetMessages, WavrMeterWidget};
+use wavr_meter_relm::mini::MiniMeter;
+use wavr_meter_relm::{mini, Messages as WidgetMessages, WavrMeterWidget};
 
 #[derive(Msg, Clone, Debug)]
 enum AppMessages {
@@ -28,7 +30,9 @@ enum AppMessages {
 
 struct App {
     root: gtk::Window,
+    thebox: gtk::Box,
     meter: Component<WavrMeterWidget>,
+    minimeter: Component<MiniMeter>,
     channel: Channel<AppMessages>,
     stream: cpal::Stream,
 }
@@ -104,7 +108,19 @@ impl Update for App {
     fn update(&mut self, event: Self::Msg) {
         match event {
             AppMessages::Quit => gtk::main_quit(),
-            AppMessages::MeterMessage(event) => self.meter.emit(event),
+            AppMessages::MeterMessage(event) => {
+                self.meter.emit(event.clone());
+                if let WidgetMessages::Value(data) = event {
+                    let peak = data
+                        .peak
+                        .iter()
+                        .cloned()
+                        .filter(|a| a.0.is_finite())
+                        .max_by(|a, b| a.partial_cmp(b).unwrap())
+                        .unwrap_or(Linear(0.0));
+                    self.minimeter.emit(mini::Messages::Peak(peak.into()));
+                }
+            }
         }
     }
 }
@@ -128,8 +144,6 @@ impl Widget for App {
         let root = gtk::WindowBuilder::new()
             .border_width(8)
             .title("Wavr Meter")
-            .hexpand(true)
-            .vexpand(true)
             .build();
         connect!(
             relm,
@@ -137,10 +151,20 @@ impl Widget for App {
             connect_delete_event(_, _),
             return (Some(AppMessages::Quit), gtk::Inhibit(false))
         );
-        let meter = root.add_widget::<WavrMeterWidget>(());
+        let thebox = gtk::BoxBuilder::new()
+            .orientation(gtk::Orientation::Vertical)
+            .spacing(8)
+            .hexpand(true)
+            .vexpand(true)
+            .build();
+        let meter = thebox.add_widget::<WavrMeterWidget>(());
+        let minimeter = thebox.add_widget::<MiniMeter>(());
+        root.add(&thebox);
         Self {
             root,
+            thebox,
             meter,
+            minimeter,
             stream,
             channel,
         }
