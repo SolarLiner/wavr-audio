@@ -8,6 +8,7 @@ pub use context::*;
 pub use effect::*;
 pub use engine::*;
 pub use rack::*;
+pub use wavr_audio_buffer as buffer;
 
 pub mod context;
 pub mod effect;

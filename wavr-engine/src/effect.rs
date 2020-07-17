@@ -4,8 +4,12 @@
  * are licensed under MIT.
  */
 
+use smallvec::Array;
+
+use wavr_audio_buffer::AudioBuffer;
+
 use crate::context::AudioContext;
 
 pub trait Effect {
-    fn process(&mut self, context: &AudioContext, data: &mut [f64]);
+    fn process(&mut self, context: &AudioContext, buffer: &mut AudioBuffer);
 }

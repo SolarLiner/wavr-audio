@@ -1,7 +1,9 @@
 [workspace]
 members = [
+    "wavr-audio-buffer",
     "wavr-engine",
     "wavr-meter",
     "wavr-meter-iced",
     "wavr-meter-relm",
+    "wavr-waveform",
 ]

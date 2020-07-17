@@ -14,58 +14,46 @@ pub struct PeakMeter {
     meter: EbuR128,
     decay: f64,
     peaks: CircularQueue<Linear>,
-    last_shown_peak: Linear,
+    last_peak: Linear,
 }
 
 impl PeakMeter {
     pub fn new(sample_rate: u32) -> Self {
         Self {
-            meter: EbuR128::new(
-                1,
-                sample_rate,
-                ebur128::Mode::SAMPLE_PEAK | ebur128::Mode::TRUE_PEAK,
-            )
-            .unwrap(),
-            peaks: CircularQueue::with_capacity(5),
-            last_shown_peak: Linear(0.0),
-            decay: 0.96,
+            meter: EbuR128::new(1, sample_rate, ebur128::Mode::TRUE_PEAK).unwrap(),
+            peaks: CircularQueue::with_capacity(10),
+            last_peak: Linear(0.0),
+            decay: 0.98,
         }
     }
 
     pub fn add_samples(&mut self, buffer: &[f64]) {
+        if let Some(peak) = self.peaks.iter().cloned().next() {
+            let peak = self.get_held_peak(peak);
+            self.last_peak = if peak >= self.last_peak {
+                peak
+            } else {
+                self.last_peak * self.decay
+            };
+        }
+
         self.meter.add_frames_f64(buffer).unwrap();
+        self.peaks
+            .push(Linear(self.meter.prev_true_peak(0).unwrap()));
     }
 
+    pub fn decay(&self) -> f64 {
+        self.decay
+    }
     pub fn set_decay(&mut self, decay: f64) {
         self.decay = decay;
     }
 
-    pub fn get_sample_peak(&mut self) -> Linear {
-        let val = self.meter.prev_sample_peak(0).unwrap();
-        let val = self.get_held_peak(Linear(val));
-        let val = if val > self.last_shown_peak {
-            val
-        } else {
-            self.last_shown_peak * self.decay
-        };
-        self.last_shown_peak = val;
-        val
+    pub fn get_true_peak(&self) -> Linear {
+        self.last_peak
     }
 
-    pub fn get_true_peak(&mut self) -> Linear {
-        let val = self.meter.prev_true_peak(0).unwrap();
-        let val = self.get_held_peak(Linear(val));
-        let val = if val >= self.last_shown_peak {
-            val
-        } else {
-            self.last_shown_peak * self.decay
-        };
-        self.last_shown_peak = val;
-        val
-    }
-
-    fn get_held_peak(&mut self, val: Linear) -> Linear {
-        self.peaks.push(val);
+    fn get_held_peak(&self, val: Linear) -> Linear {
         *self
             .peaks
             .iter()

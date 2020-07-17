@@ -15,6 +15,7 @@ relm = "0.20"
 relm-derive = "0.20"
 num = "0.3"
 pango = "0.9"
+wavr-audio-buffer = { path = "../wavr-audio-buffer" }
 wavr-engine = { path = "../wavr-engine" }
 wavr-meter = { path = "../wavr-meter" }
 

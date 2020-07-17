@@ -17,6 +17,7 @@ use num::ToPrimitive;
 use relm::{connect, Channel, Component, ContainerWidget, Relm, Sender, Update, Widget};
 use relm_derive::Msg;
 
+use wavr_audio_buffer::AudioBuffer;
 use wavr_meter::decibel::Linear;
 use wavr_meter::{WavrMeter, WavrMeterData};
 use wavr_meter_relm::mini::MiniMeter;
@@ -48,53 +49,10 @@ impl Update for App {
             move |msg| stream.emit(msg)
         });
         let config = stream_config.config();
-        let mut meter = WavrMeter::new(config.channels as u32, config.sample_rate.0);
         let stream = match stream_config.sample_format() {
-            SampleFormat::U16 => device.build_input_stream::<u16, _, _>(
-                &config,
-                move |data, _cb_info| {
-                    let buf = data
-                        .iter()
-                        .map(|v| cpal::Sample::to_f32(v) as f64)
-                        .collect::<Vec<_>>();
-                    meter.add_samples(&buf);
-                    sender
-                        .send(AppMessages::MeterMessage(WidgetMessages::Value(
-                            meter.get_values(),
-                        )))
-                        .unwrap();
-                },
-                error_fn,
-            ),
-            SampleFormat::I16 => device.build_input_stream::<i16, _, _>(
-                &config,
-                move |data, _cb_info| {
-                    let buf = data
-                        .iter()
-                        .map(|v| cpal::Sample::to_f32(v) as f64)
-                        .collect::<Vec<_>>();
-                    meter.add_samples(&buf);
-                    sender
-                        .send(AppMessages::MeterMessage(WidgetMessages::Value(
-                            meter.get_values(),
-                        )))
-                        .unwrap();
-                },
-                error_fn,
-            ),
-            SampleFormat::F32 => device.build_input_stream::<f32, _, _>(
-                &config,
-                move |data, _cb_info| {
-                    let buf = data.iter().map(|v| *v as f64).collect::<Vec<_>>();
-                    meter.add_samples(&buf);
-                    sender
-                        .send(AppMessages::MeterMessage(WidgetMessages::Value(
-                            meter.get_values(),
-                        )))
-                        .unwrap();
-                },
-                error_fn,
-            ),
+            SampleFormat::U16 => build_stream::<u16>(device, &config, sender),
+            SampleFormat::I16 => build_stream::<i16>(device, &config, sender),
+            SampleFormat::F32 => build_stream::<f32>(device, &config, sender),
         }
         .unwrap();
         relm.stream()
@@ -176,4 +134,27 @@ fn main() {
     let device = host.default_input_device().unwrap();
     let stream_config = device.default_input_config().unwrap();
     relm::run::<App>((device, stream_config)).unwrap();
+}
+
+fn build_stream<S: cpal::Sample>(
+    device: cpal::Device,
+    config: &cpal::StreamConfig,
+    sender: Sender<AppMessages>,
+) -> Result<Stream, BuildStreamError> {
+    let mut meter = WavrMeter::new(config.channels as u32, config.sample_rate.0);
+    let channels = config.channels as usize;
+    device.build_input_stream::<S, _, _>(
+        &config,
+        move |data, _| {
+            let buf = data.iter().map(|v| v.to_f32() as f64).collect::<Vec<_>>();
+            let buffer = AudioBuffer::new(channels, &buf);
+            meter.add_samples(&buffer);
+            sender
+                .send(AppMessages::MeterMessage(WidgetMessages::Value(
+                    meter.get_values(),
+                )))
+                .unwrap();
+        },
+        error_fn,
+    )
 }

@@ -6,6 +6,10 @@ edition = "2018"
 workspace = ".."
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[dependencies]
+smallvec = "1.4.1"
+wavr-audio-buffer = { path = "../wavr-audio-buffer" }
+wavr-meter = { path = "../wavr-meter" }
 
 [dev-dependencies]
 byteorder = "1.3"

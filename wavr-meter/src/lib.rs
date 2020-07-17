@@ -4,10 +4,11 @@
  * are licensed under MIT.
  */
 
-use smallvec::SmallVec;
+use smallvec::{Array, SmallVec};
 
 pub use ebu::*;
 pub use peak::*;
+use wavr_audio_buffer::AudioBuffer;
 
 use crate::decibel::{Linear, LUFS};
 
@@ -37,21 +38,17 @@ impl WavrMeter {
         }
     }
 
-    pub fn add_samples(&mut self, buffer: &[f64]) {
-        self.ebu_meter.add_samples(buffer);
-        let channels = group_interleaved_channels(buffer, self.channels as usize);
-        for (buffer, meter) in channels.into_iter().zip(&mut self.peak_meters) {
+    pub fn add_samples(&mut self, buffer: &AudioBuffer) {
+        let interleaved = AudioBuffer::clone(buffer).interleave();
+        self.ebu_meter.add_samples(&interleaved);
+        for (buffer, meter) in buffer.iter().zip(&mut self.peak_meters) {
             meter.add_samples(&buffer);
         }
     }
 
-    pub fn get_values(&mut self) -> WavrMeterData {
+    pub fn get_values(&self) -> WavrMeterData {
         WavrMeterData {
-            peak: self
-                .peak_meters
-                .iter_mut()
-                .map(|m| m.get_true_peak())
-                .collect(),
+            peak: self.peak_meters.iter().map(|m| m.get_true_peak()).collect(),
             loudness: self.ebu_meter.get_loudness(),
         }
     }

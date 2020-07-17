@@ -6,6 +6,8 @@
 
 use std::time::Duration;
 
+use wavr_audio_buffer::AudioBuffer;
+
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub enum AudioContextState {
     Paused,
@@ -17,24 +19,18 @@ pub enum AudioContextState {
 pub struct AudioContext {
     pub sample_rate: u64,
     pub channel_count: u8,
-    pub buffer_size: usize,
     pub current_sample: usize,
     pub state: AudioContextState,
 }
 
 impl AudioContext {
-    pub fn new(sample_rate: u64, channel_count: u8, buffer_size: usize) -> Self {
+    pub fn new(sample_rate: u64, channel_count: u8) -> Self {
         Self {
             sample_rate,
             channel_count,
-            buffer_size,
             current_sample: 0,
             state: AudioContextState::Paused,
         }
-    }
-
-    pub fn interleaved_buffer_length(&self) -> usize {
-        self.channel_count as usize * self.buffer_size as usize
     }
 
     pub fn timestamp(&self) -> Duration {
@@ -47,8 +43,8 @@ impl AudioContext {
         Duration::from_secs_f64(seconds)
     }
 
-    pub fn add_sample_cycle(&mut self) {
-        self.current_sample += self.buffer_size;
+    pub fn add_sample_cycle(&mut self, buffer: &AudioBuffer) {
+        self.current_sample += buffer.buffer_size();
     }
 
     pub fn is_playing(&self) -> bool {

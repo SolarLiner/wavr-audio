@@ -4,26 +4,40 @@
  * are licensed under MIT.
  */
 
-use crate::context::AudioContext;
-use crate::effect::Effect;
 use std::collections::LinkedList;
 use std::ops::Deref;
 
+use smallvec::Array;
+
+use wavr_audio_buffer::AudioBuffer;
+use wavr_meter::{WavrMeter, WavrMeterData};
+
+use crate::context::AudioContext;
+use crate::effect::Effect;
+
 pub struct RackEffect {
     effect: Box<dyn Effect>,
+    meter: Option<WavrMeter>,
     enabled: bool,
 }
 
 pub struct Rack {
+    input_meter: Option<WavrMeter>,
     effects: LinkedList<RackEffect>,
+    output_meter: Option<WavrMeter>,
 }
 
 impl RackEffect {
     pub fn new<E: 'static + Effect>(effect: E) -> Self {
         Self {
             effect: Box::new(effect),
+            meter: None,
             enabled: true,
         }
+    }
+
+    pub fn get_meter_data(&self) -> Option<WavrMeterData> {
+        self.meter.as_ref().map(|m| m.get_values())
     }
 
     pub fn enabled(&self) -> bool {
@@ -44,8 +58,12 @@ impl RackEffect {
 }
 
 impl Effect for RackEffect {
-    fn process(&mut self, context: &AudioContext, data: &mut [f64]) {
-        self.effect.process(context, data)
+    fn process(&mut self, context: &AudioContext, data: &mut AudioBuffer) {
+        self.effect.process(context, data);
+        let meter = self.meter.get_or_insert_with(|| {
+            WavrMeter::new(context.channel_count as u32, context.sample_rate as u32)
+        });
+        meter.add_samples(data);
     }
 }
 
@@ -79,22 +97,44 @@ impl Rack {
         after.push_front(effect);
         self.effects.append(&mut after);
     }
+
+    pub fn get_input_meter_data(&self) -> Option<WavrMeterData> {
+        self.input_meter.as_ref().map(|m| m.get_values())
+    }
+
+    pub fn get_output_meter_data(&self) -> Option<WavrMeterData> {
+        self.output_meter.as_ref().map(|m| m.get_values())
+    }
 }
 
 impl Default for Rack {
     fn default() -> Self {
         Self {
+            input_meter: None,
             effects: LinkedList::new(),
+            output_meter: None,
         }
     }
 }
 
 impl Effect for Rack {
-    fn process(&mut self, context: &AudioContext, data: &mut [f64]) {
+    fn process(&mut self, context: &AudioContext, data: &mut AudioBuffer) {
+        if !context.is_playing() {
+            return;
+        }
+
+        let input_meter = self.input_meter.get_or_insert_with(|| {
+            WavrMeter::new(context.channel_count as u32, context.sample_rate as u32)
+        });
+        let output_meter = self.output_meter.get_or_insert_with(|| {
+            WavrMeter::new(context.channel_count as u32, context.sample_rate as u32)
+        });
+        input_meter.add_samples(data);
         if !self.effects.is_empty() {
             for effect in self.effects.iter_mut().filter(|e| e.enabled) {
                 effect.process(context, data);
             }
         }
+        output_meter.add_samples(data);
     }
 }
