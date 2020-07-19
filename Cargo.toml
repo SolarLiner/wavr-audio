@@ -5,5 +5,4 @@ members = [
     "wavr-meter",
     "wavr-meter-iced",
     "wavr-meter-relm",
-    "wavr-waveform",
 ]
