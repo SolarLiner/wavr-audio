@@ -75,7 +75,7 @@ impl AudioBuffer {
     /// Create an `AudioBuffer` from interleaved data. Samples are copied from
     /// the buffer into itself.
     pub fn new(channels: usize, data: &[f64]) -> Self {
-        let mut this = unsafe { Self::unitialized(channels, data.len() / channels) };
+        let mut this = unsafe { Self::uninitialized(channels, data.len() / channels) };
 
         for (i, v) in data.iter().cloned().enumerate() {
             this.audio_data[i % channels][i / channels] = v;
@@ -92,7 +92,8 @@ impl AudioBuffer {
         }
     }
 
-    /// Create an `AudioBuffer` containing unitialized data.
+    /// Create an `AudioBuffer` containing unitialized data. This is faster than
+    /// `AudioBuffer::zeroed` but reading from it is undefined behavior.
     ///
     /// ### Safety
     ///
@@ -100,7 +101,7 @@ impl AudioBuffer {
     /// explicitely zeroing it. The buffers will therefore contain uninitilized
     /// data and reading from it is undefined behavior (and playing it will hurt
     /// your ears!)
-    pub unsafe fn unitialized(channels: usize, buffer_size: usize) -> Self {
+    pub unsafe fn uninitialized(channels: usize, buffer_size: usize) -> Self {
         Self {
             audio_data: SmallVec::from_vec(vec![
                 {
