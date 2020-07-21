@@ -1,7 +1,9 @@
 name: Docs
 
 on:
-  push: [master]
+  push:
+    branches:
+      - master
 
 env:
   CARGO_TERM_COLOR: always
