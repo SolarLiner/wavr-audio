@@ -1,0 +1,48 @@
+name: Rust
+
+on: [push, pull_request]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Cache
+      uses: actions/cache@v2.0.0
+      with:
+        # A list of files, directories, and wildcard patterns to cache and restore
+        path: target
+        # An explicit key for restoring and saving the cache
+        key: ubuntu-check-${{ hash('Cargo.lock') }}
+    - name: Cargo Check
+      run: cargo check --verbose
+  test:
+    strategy:
+      matrix:
+        os: [ubuntu, macos, windows]
+    runs-on: ${{ matrix.os }}-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Cache
+        uses: actions/cache@v2.0.0
+        with:
+          path: target
+          key: ${{ matrix.os }}-test-${{ hash('Cargo.lock') }}
+      - name: Cargo Test
+        run: cargo test --verbose
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Cache
+        uses: actions/cache@v2.0.0
+        with:
+          path: target
+          key: ubuntu-test-${{ hash('Cargo.lock') }}
+      - name: Cargo Docs
+        run: cargo doc --all-features
+      - name: GitHub Pages
+        uses: crazy-max/ghaction-github-pages@v2.1.1
